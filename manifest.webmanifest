@@ -1,0 +1,14 @@
+{
+  "name": "Grands explorateurs — le système solaire à toucher",
+  "short_name": "Explorateurs",
+  "description": "Application de découverte du système solaire pour les tout-petits : une fusée, des planètes à toucher, des voix et de la musique.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#050516",
+  "theme_color": "#050516",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,12 @@
+# Fichier lourd remplacé par sa version compressée (soundtrack.m4a)
+audio/soundtrack.WAV
+audio/soundtrack.wav
+
+# Projet Ableton privé (sources des enregistrements)
+record-voix Project/
+*.asd
+*.aif
+*.als
+
+# Fichiers macOS
+.DS_Store

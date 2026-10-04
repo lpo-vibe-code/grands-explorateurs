@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Explorateurs">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" sizes="192x192" href="icon-192.png">
+<title>Grands explorateurs</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🚀</text></svg>">
+<style>
+@font-face {
+  font-family: 'Orbitron';
+  src: url('fonts/orbitron-700.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%; overflow:hidden; position:fixed; inset:0;
+    background:#050516;
+    touch-action:none;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+    font-family:-apple-system, "SF Pro", Roboto, sans-serif;
+  }
+  svg#scene { width:100%; height:100%; display:block; }
+
+  /* ---- étoiles ---- */
+  .star { animation:tw var(--d,3s) ease-in-out var(--dl,0s) infinite; }
+  @keyframes tw { 0%,100% { opacity:.22; } 50% { opacity:1; } }
+
+  /* ---- soleil ---- */
+  .sun-glow { animation:sunPulse 5s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes sunPulse { 0%,100% { transform:scale(1); opacity:.85; } 50% { transform:scale(1.09); opacity:1; } }
+  .sun-rays { animation:spin 140s linear infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .sun-vis.cheer { animation:cheer .9s ease; transform-box:fill-box; transform-origin:center; }
+  @keyframes cheer { 30% { transform:scale(1.07); } 60% { transform:scale(.98); } }
+
+  /* ---- halo de sélection ---- */
+  .body-glow {
+    fill:none; stroke:#ffd23e; stroke-width:3; opacity:0;
+    transform-box:fill-box; transform-origin:center; pointer-events:none;
+  }
+  .body-glow.on { animation:glowPulse 1.6s ease-in-out infinite; }
+  @keyframes glowPulse { 0%,100% { opacity:.22; transform:scale(1); } 50% { opacity:.8; transform:scale(1.1); } }
+
+  /* ---- zones tactiles ---- */
+  .hit { fill:#fff; fill-opacity:0; cursor:pointer; }
+
+  /* ---- flamme de la fusée (3 niveaux : opacité / taille / vacillement) ---- */
+  .flameWrap { opacity:0; transition:opacity .18s; pointer-events:none; }
+  .flameWrap.on { opacity:1; }
+  .flameSize { transform-box:fill-box; transform-origin:top center; }
+  .flameWrap.small .flameSize { transform:scale(.5); }
+  .flameFlick { animation:flick .13s alternate infinite; transform-box:fill-box; transform-origin:top center; }
+  @keyframes flick { from { transform:scaleY(.82); } to { transform:scaleY(1.18); } }
+
+  /* ---- écran de démarrage : capte le premier tap ---- */
+  #introTap { position:absolute; inset:0; z-index:5; cursor:pointer; }
+
+  /* ---- titre de l'écran de démarrage ---- */
+  #titreIntro {
+    position:absolute; left:50%; top:88%; transform:translateX(-50%);
+    z-index:6; pointer-events:none; white-space:nowrap;
+    font-family:'Orbitron', 'Arial Rounded MT Bold', sans-serif;
+    font-weight:700; font-size:clamp(26px, 4.5vw, 58px);
+    letter-spacing:.14em; text-transform:uppercase; text-align:center;
+    color:#f0f6ff;
+    text-shadow:0 0 16px rgba(120,180,255,.85), 0 0 42px rgba(150,100,255,.5);
+    opacity:1; transition:opacity .8s;
+  }
+  #titreIntro.hide { opacity:0; }
+
+  /* ---- indication "tape ici" ---- */
+  #hint {
+    position:absolute; left:50%; top:56%; width:120px; height:120px;
+    transform:translate(-50%,-50%); pointer-events:none;
+    transition:opacity .6s; z-index:6;
+  }
+  #hint.hide { opacity:0; }
+  .hint-bob { animation:bob 1.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-16px); } }
+  .hint-ring { animation:spin 6s linear infinite; transform-box:fill-box; transform-origin:center; }
+
+  /* ---- cadenas parents : visible, pulsant au démarrage ---- */
+  #lock {
+    position:absolute; right:calc(14px + env(safe-area-inset-right));
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    width:64px; height:64px; opacity:.55; cursor:pointer; touch-action:none; z-index:6;
+  }
+  #lock:active { opacity:.85; }
+  #lock.decouvre { animation:lockPulse 2.6s ease-in-out infinite; }
+  @keyframes lockPulse { 0%,100% { opacity:.4; } 50% { opacity:.95; } }
+
+  /* ---- fusée : tremblement du compte à rebours ---- */
+  .rocketfx.countdown { animation:wiggle .22s ease-in-out infinite; }
+  @keyframes wiggle { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-2.5px); } 75% { transform:translateX(2.5px); } }
+
+  /* ---- satellite : feu de signalisation ---- */
+  .clignote { animation:clignote 1.8s ease-in-out infinite; }
+  @keyframes clignote { 0%, 55% { opacity:1; } 65%, 100% { opacity:.08; } }
+
+  /* ---- ovni : feux de navigation qui clignotent en cadence ---- */
+  .ovni-feux { animation: clignote 1.3s ease-in-out infinite; }
+
+  /* ---- panneau parents ---- */
+  #parent {
+    position:fixed; inset:0; background:rgba(4,6,20,.82);
+    display:flex; align-items:center; justify-content:center; z-index:50;
+  }
+  #parent.hidden { display:none; }
+  #parent .panel {
+    background:#161a34; color:#eef0ff; border-radius:26px;
+    padding:30px 34px; max-width:420px; width:min(90vw,420px);
+    box-shadow:0 20px 60px rgba(0,0,0,.6); text-align:center;
+  }
+  #parent h2 { font-size:22px; margin-bottom:20px; }
+  #parent button {
+    display:block; width:100%; margin:10px 0; padding:16px;
+    font-size:18px; border:none; border-radius:16px;
+    background:#2a305c; color:#eef0ff; cursor:pointer;
+  }
+  #parent button:active { background:#39407a; }
+  #parent .volrow { display:flex; align-items:center; gap:14px; margin:12px 0; font-size:17px; }
+  #parent input[type="range"] { flex:1; accent-color:#ffd23e; height:40px; }
+  #parent .tip { margin-top:16px; font-size:13px; opacity:.65; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<svg id="scene" viewBox="0 0 1800 1250" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dégradés des astres (style semi-réaliste doux) -->
+    <radialGradient id="g-soleil" cx="50%" cy="45%" r="62%">
+      <stop offset="0%" stop-color="#fff6cf"/><stop offset="55%" stop-color="#ffd23e"/><stop offset="100%" stop-color="#ff8a1e"/>
+    </radialGradient>
+    <radialGradient id="g-soleil-glow">
+      <stop offset="0%" stop-color="rgba(255,196,64,.55)"/><stop offset="65%" stop-color="rgba(255,170,40,.16)"/><stop offset="100%" stop-color="rgba(255,170,40,0)"/>
+    </radialGradient>
+    <radialGradient id="g-mercure" cx="38%" cy="34%" r="80%"><stop offset="0%" stop-color="#d8d3cb"/><stop offset="100%" stop-color="#8f8a83"/></radialGradient>
+    <radialGradient id="g-venus"   cx="38%" cy="34%" r="80%"><stop offset="0%" stop-color="#ffe8c0"/><stop offset="100%" stop-color="#e09a3e"/></radialGradient>
+    <radialGradient id="g-terre"   cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#9fd8ff"/><stop offset="55%" stop-color="#3f7fd9"/><stop offset="100%" stop-color="#1c4a9c"/></radialGradient>
+    <radialGradient id="g-lune"    cx="38%" cy="34%" r="80%"><stop offset="0%" stop-color="#f0f0f4"/><stop offset="100%" stop-color="#9fa1ad"/></radialGradient>
+    <radialGradient id="g-mars"    cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#ffa06a"/><stop offset="60%" stop-color="#c8452a"/><stop offset="100%" stop-color="#7e2a18"/></radialGradient>
+    <radialGradient id="g-jupiter" cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#f7e3c6"/><stop offset="100%" stop-color="#c98d55"/></radialGradient>
+    <radialGradient id="g-saturne" cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#f9ecc4"/><stop offset="100%" stop-color="#d3b06e"/></radialGradient>
+    <radialGradient id="g-uranus"  cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#dff8fa"/><stop offset="100%" stop-color="#5fc0d4"/></radialGradient>
+    <radialGradient id="g-neptune" cx="38%" cy="34%" r="85%"><stop offset="0%" stop-color="#8fb4ff"/><stop offset="55%" stop-color="#2a52c9"/><stop offset="100%" stop-color="#152b7a"/></radialGradient>
+    <!-- reflet doux commun -->
+    <radialGradient id="gloss" cx="34%" cy="28%" r="75%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".45"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- fusée -->
+    <linearGradient id="g-rbody" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#c7d0de"/></linearGradient>
+    <linearGradient id="g-rnose" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ff8a68"/><stop offset="100%" stop-color="#e23c34"/></linearGradient>
+    <linearGradient id="g-ring"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f7e9c0"/><stop offset="100%" stop-color="#c9a55e"/></linearGradient>
+    <!-- anneau de traînée d'étoile filante -->
+    <linearGradient id="g-etoile" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="-135" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="g-navette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c3ccdd"/>
+    </linearGradient>
+    <linearGradient id="g-sat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef1f6"/><stop offset="1" stop-color="#aab4c6"/>
+    </linearGradient>
+    <radialGradient id="g-ovni" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#dfe8f2"/><stop offset="100%" stop-color="#7d8fa6"/>
+    </radialGradient>
+    <!-- anneaux de Saturne : moitié arrière / moitié avant -->
+    <clipPath id="sat-back"><rect x="-500" y="-500" width="1000" height="500"/></clipPath>
+    <clipPath id="sat-front"><rect x="-500" y="0" width="1000" height="500"/></clipPath>
+    <filter id="f-blur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="42"/></filter>
+  </defs>
+
+  <g id="gCamera">
+    <g id="gNebula"></g>
+    <g id="gStars"></g>
+    <g id="gShooting"></g>
+    <g id="gOrbits"></g>
+    <g id="gShuttle"></g>
+    <g id="gBodies"></g>
+    <g id="gTrail"></g>
+    <g id="gRocket"></g>
+    <g id="gKids"></g>
+    <g id="gFx"></g>
+    <g id="gHits"></g>
+  </g>
+</svg>
+
+<!-- indication "tape ici" (aucun texte) -->
+<div id="hint">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <circle class="hint-ring" cx="60" cy="60" r="42" fill="none" stroke="#ffd23e" stroke-width="3" stroke-dasharray="10 12" opacity=".7"/>
+    <g class="hint-bob">
+      <circle cx="60" cy="52" r="13" fill="#ffffff" opacity=".95"/>
+      <rect x="52" y="60" width="16" height="34" rx="8" fill="#ffffff" opacity=".95"/>
+    </g>
+  </svg>
+</div>
+
+<!-- cadenas parents : maintenir 3 secondes, ou 3 petits taps -->
+<div id="lock" class="decouvre" title="Parents">
+  <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="31" cy="31" r="28" fill="#141830" stroke="#9aa3c7" stroke-width="1.5"/>
+    <circle id="lockProg" cx="31" cy="31" r="28" fill="none" stroke="#ffd23e" stroke-width="3"
+            stroke-dasharray="175.9" stroke-dashoffset="175.9" transform="rotate(-90 31 31)"/>
+    <rect x="21" y="28" width="20" height="15" rx="3.5" fill="none" stroke="#cdd4f0" stroke-width="3"/>
+    <path d="M24 28 v-4 a7 7 0 0 1 14 0 v4" fill="none" stroke="#cdd4f0" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<!-- panneau parents (texte réservé aux adultes) -->
+<div id="parent" class="hidden">
+  <div class="panel">
+    <h2>Espace parents</h2>
+    <button id="btnSound">🔊 Son : activé</button>
+    <button id="btnMusic">🎵 Musique : activée</button>
+    <div class="volrow"><span>🎵 Volume</span><input type="range" id="musicVol" min="0" max="100" value="50" aria-label="Volume de la musique"></div>
+    <button id="btnFS">⛶ Plein écran</button>
+    <button id="btnClose">✅ Fermer</button>
+    <p class="tip">Pour ajouter votre voix : déposez un fichier audio par astre dans le dossier <b>audio/</b>
+    (ex. <b>audio/mars.mp3</b>). Liste complète dans <b>audio/LISEZMOI.txt</b>.<br>
+    En attendant, une voix de synthèse prend le relais.</p>
+  </div>
+</div>
+
+<!-- écran de démarrage : capte le tout premier tap (les enfants montent à bord, puis dézoom) -->
+<div id="introTap"></div>
+
+<!-- titre affiché pendant l'écran de démarrage, sous la planète (la Lune passe au-dessus) -->
+<div id="titreIntro">Grands explorateurs</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   LE SYSTÈME SOLAIRE À TOUCHER — application de découverte (3 ans+)
+   Zéro texte pour l'enfant : tout passe par le toucher, le son, l'image.
+   Mécanique centrale : une petite fusée qui décolle de la Terre,
+   voyage d'astre en astre et se met en orbite autour de l'astre tapé.
+   ===================================================================== */
+
+const SVG = document.getElementById('scene');
+const NS  = 'http://www.w3.org/2000/svg';
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const CX = 900, CY = 625;
+
+const deg   = r => r * R2D;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const smooth  = t => t * t * (3 - 2 * t);
+
+function el(name, attrs, parent) {
+  const n = document.createElementNS(NS, name);
+  for (const k in attrs) {
+    if (k === 'text') n.textContent = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function turnTo(cur, tgt, max) { // rotation avec vitesse angulaire limitée
+  let d = ((tgt - cur + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI;
+  return cur + Math.max(-max, Math.min(max, d));
+}
+function angleDiff(a, b) { // écart angulaire signé le plus court
+  return ((a - b + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI;
+}
+function lerpDeg(a, b, k) {
+  let d = ((b - a + 180) % 360 + 360) % 360 - 180;
+  return a + d * k;
+}
+
+/* ------------------------------------------------------------------ */
+/* 1. LES ASTRES : configuration (positions stylisées, pas à l'échelle) */
+/* ------------------------------------------------------------------ */
+const SUN = { id:'soleil', x:CX, y:CY, r:80, orbitGap:55, glowR:104, hitR:108 };
+
+const PLANETS = [
+  { id:'mercure', rx:250, ry:130, w:.085,  r:16 },
+  { id:'venus',   rx:320, ry:172, w:.066,  r:24 },
+  { id:'terre',   rx:392, ry:216, w:.052,  r:26 },
+  { id:'mars',    rx:462, ry:258, w:.041,  r:20 },
+  { id:'jupiter', rx:560, ry:320, w:.029,  r:46, orbitGap:40 },
+  { id:'saturne', rx:688, ry:398, w:.0215, r:36, orbitGap:62, glowR:72, hitR:80 },
+  { id:'uranus',  rx:782, ry:468, w:.0165, r:28, orbitGap:36 },
+  { id:'neptune', rx:833, ry:544, w:.013,  r:28, orbitGap:34 },
+];
+
+const MOON = { id:'lune', r:10, orb:58, w:.6, orbitGap:24, glowR:28, hitR:38 };
+
+const bodies = {}, order = [];
+function addBody(b) {
+  b.a = Math.random() * Math.PI * 2;
+  b.x = 0; b.y = 0;
+  bodies[b.id] = b; order.push(b);
+}
+addBody(SUN); PLANETS.forEach(addBody); addBody(MOON);
+
+/* Phrases de la voix off (utilisées par la synthèse vocale en secours) */
+const LINES = {
+  accueil : "Touche une planète pour jouer !",
+  compte  : "Troooois... deux... un... décollage !",
+  soleil : "Le Soleil ! Notre grande étoile ! Il nous donne chaud et la lumière !",
+  mercure: "Mercure ! Toute petite, toute grise, tout près du Soleil !",
+  venus  : "Vénus ! La belle planète orange !",
+  terre  : "La Terre ! C'est notre maison !",
+  lune   : "La Lune ! Elle tourne autour de la Terre !",
+  mars   : "Mars ! La planète rouge !",
+  jupiter: "Jupiter ! La plus grande de toutes les planètes !",
+  saturne: "Saturne ! Regarde ses beaux anneaux !",
+  uranus : "Uranus ! La grande planète bleue !",
+  neptune: "Neptune ! Tout au bout, où il fait très froid !",
+};
+
+/* ------------------------------------------------------------------ */
+/* 2. DÉCOR : nébuleuses, étoiles, orbites                             */
+/* ------------------------------------------------------------------ */
+(function buildBackdrop() {
+  const neb = document.getElementById('gNebula');
+  const nebCfg = [
+    { x:430,  y:350, rx:480, ry:240, c:'#6a5acd', o:.10 },
+    { x:1330, y:850, rx:540, ry:270, c:'#2e6f8f', o:.09 },
+    { x:1010, y:250, rx:400, ry:190, c:'#8f4f9c', o:.07 },
+  ];
+  for (const n of nebCfg) el('ellipse', { cx:n.x, cy:n.y, rx:n.rx, ry:n.ry, fill:n.c, opacity:n.o, filter:'url(#f-blur)' }, neb);
+
+  const stars = document.getElementById('gStars');
+  const cols = ['#cfd8ff', '#ffffff', '#ffe9c9', '#cfe8ff'];
+  for (let i = 0; i < 240; i++) { // large : les étoiles habillent aussi le gros plan du démarrage
+    const c = el('circle', {
+      cx: (-450 + Math.random() * 2700).toFixed(1), cy: (-450 + Math.random() * 2150).toFixed(1),
+      r: (.7 + Math.random() * 1.3).toFixed(2),
+      fill: cols[(Math.random() * cols.length) | 0], class: 'star',
+    }, stars);
+    c.style.setProperty('--d',  (2 + Math.random() * 4).toFixed(2) + 's');
+    c.style.setProperty('--dl', (Math.random() * 4).toFixed(2) + 's');
+  }
+
+  const orb = document.getElementById('gOrbits');
+  for (const p of PLANETS) el('ellipse', { cx:CX, cy:CY, rx:p.rx, ry:p.ry, fill:'none', stroke:'rgba(255,255,255,.07)', 'stroke-width':1.5 }, orb);
+})();
+
+/* ------------------------------------------------------------------ */
+/* 3. DESSIN DES ASTRES (semi-réaliste doux, tout en SVG)              */
+/* ------------------------------------------------------------------ */
+const gBodies = document.getElementById('gBodies');
+const defs = SVG.querySelector('defs');
+let sunVis = null;
+
+function withClip(b, parent) { // renvoie un groupe découpé au contour de l'astre
+  const id = 'clip-' + b.id;
+  const cp = el('clipPath', { id }, defs);
+  el('circle', { r: b.r }, cp);
+  return el('g', { 'clip-path': `url(#${id})` }, parent);
+}
+
+function drawBody(b, g) {
+  const r = b.r;
+  switch (b.id) {
+
+    case 'soleil': {
+      el('circle', { r: r * 2.3, fill: 'url(#g-soleil-glow)', class: 'sun-glow' }, g);
+      const rays = el('g', { class: 'sun-rays' }, g);
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        el('path', {
+          d: `M0 0 L${(Math.cos(a-.055)*r*1.12).toFixed(1)} ${(Math.sin(a-.055)*r*1.12).toFixed(1)} L${(Math.cos(a)*r*1.55).toFixed(1)} ${(Math.sin(a)*r*1.55).toFixed(1)} L${(Math.cos(a+.055)*r*1.12).toFixed(1)} ${(Math.sin(a+.055)*r*1.12).toFixed(1)} Z`,
+          fill: '#ffd23e', opacity: .14
+        }, rays);
+      }
+      sunVis = el('g', { class: 'sun-vis' }, g);
+      el('circle', { r, fill: 'url(#g-soleil)' }, sunVis);
+      el('circle', { cx: -r*.25, cy: -r*.3, r: r*.5, fill: '#ffffff', opacity: .12 }, sunVis);
+      el('circle', { cx: r*.3,  cy:  r*.25, r: r*.32, fill: '#ff8a1e', opacity: .18 }, sunVis);
+      break;
+    }
+
+    case 'mercure': {
+      el('circle', { r, fill: 'url(#g-mercure)' }, g);
+      const d = withClip(b, g);
+      for (const c of [[-6,-4,3.5],[5,2,2.6],[-2,7,2],[8,-6,2],[-9,5,1.6],[1,-8,1.4]])
+        el('circle', { cx:c[0], cy:c[1], r:c[2], fill:'#7d7871', opacity:.45 }, d);
+      break;
+    }
+
+    case 'venus': {
+      el('circle', { r, fill: 'url(#g-venus)' }, g);
+      const d = withClip(b, g);
+      el('path', { d:'M-24 -6 C -12 -14 6 -3 25 -10', fill:'none', stroke:'#ffffff', 'stroke-width':3.5, opacity:.4, 'stroke-linecap':'round' }, d);
+      el('path', { d:'M-26 7 C -10 15 6 5 26 11',    fill:'none', stroke:'#ffffff', 'stroke-width':3,   opacity:.3,  'stroke-linecap':'round' }, d);
+      break;
+    }
+
+    case 'terre': {
+      el('circle', { r, fill: 'url(#g-terre)' }, g);
+      const d = withClip(b, g);
+      el('path', { d:'M-16 -10 C -10 -17 -1 -15 1 -8 C 3 -1 -6 3 -12 1 C -18 -1 -20 -5 -16 -10 Z', fill:'#58b368' }, d);
+      el('path', { d:'M6 1 C 13 -3 19 2 18 8 C 16 14 8 15 5 10 C 3 5 3 3 6 1 Z', fill:'#58b368' }, d);
+      el('circle', { cx:-2, cy:15, r:3, fill:'#58b368' }, d);
+      el('ellipse', { cx:-8, cy:-2, rx:8, ry:2.6, fill:'#ffffff', opacity:.55, transform:'rotate(-14 -8 -2)' }, d);
+      el('ellipse', { cx:10, cy:-12, rx:6, ry:2,   fill:'#ffffff', opacity:.5 }, d);
+      el('ellipse', { cx:4,  cy:13,  rx:7, ry:2.4, fill:'#ffffff', opacity:.45, transform:'rotate(8 4 13)' }, d);
+      el('circle', { r: r + 2.5, fill:'none', stroke:'rgba(150,205,255,.5)', 'stroke-width':2.5 }, g); // atmosphère
+      break;
+    }
+
+    case 'lune': {
+      el('circle', { r, fill: 'url(#g-lune)' }, g);
+      const d = withClip(b, g);
+      for (const c of [[-3,-2,2.6],[4,1,1.8],[1,5,1.3],[-4,4,1]])
+        el('circle', { cx:c[0], cy:c[1], r:c[2], fill:'#8b8d99', opacity:.55 }, d);
+      break;
+    }
+
+    case 'mars': {
+      el('circle', { r, fill: 'url(#g-mars)' }, g);
+      const d = withClip(b, g);
+      el('ellipse', { cx:-5, cy:3, rx:8, ry:5, fill:'#a63a22', opacity:.55, transform:'rotate(-10 -5 3)' }, d);
+      el('ellipse', { cx:7, cy:-6, rx:5, ry:3.5, fill:'#a63a22', opacity:.5 }, d);
+      el('ellipse', { cx:0, cy:-r*.82, rx:6, ry:2.8, fill:'#ffffff', opacity:.9 }, d); // calotte polaire
+      break;
+    }
+
+    case 'jupiter': {
+      el('circle', { r, fill: 'url(#g-jupiter)' }, g);
+      const d = withClip(b, g);
+      const bands = [
+        [-44, 8,  '#b97b46', .55], [-30, 11, '#f2ddb8', .6], [-12, 14, '#c98d55', .5],
+        [ 8,  11, '#f2ddb8', .55], [25, 8,   '#b97b46', .5], [38, 6,   '#e3c39a', .55],
+      ];
+      for (const [y, h, c, o] of bands) el('rect', { x:-r-2, y, width:2*r+4, height:h, fill:c, opacity:o, rx:3 }, d);
+      el('ellipse', { cx:r*.32, cy:r*.3, rx:7.5, ry:4.5, fill:'#d96046', opacity:.9 }, d);
+      el('ellipse', { cx:r*.32, cy:r*.3, rx:4.4, ry:2.7, fill:'#f08a6a', opacity:.9 }, d);
+      break;
+    }
+
+    case 'saturne': {
+      const RING = r * 1.7;
+      const rings = parent => {
+        el('ellipse', { rx:RING,      ry:RING*.30, fill:'none', stroke:'url(#g-ring)', 'stroke-width':9, opacity:.95 }, parent);
+        el('ellipse', { rx:RING*.83,  ry:RING*.25, fill:'none', stroke:'#fff3d0', 'stroke-width':3.5, opacity:.7 }, parent);
+      };
+      const back = el('g', { transform:'rotate(-18)', 'clip-path':'url(#sat-back)' }, g);
+      rings(back);
+      el('circle', { r, fill: 'url(#g-saturne)' }, g);
+      const d = withClip(b, g);
+      for (const [y,h,o] of [[-19,8,.4],[2,10,.45],[21,7,.4]])
+        el('rect', { x:-r-2, y, width:2*r+4, height:h, fill:'#c9a55e', opacity:o, rx:4 }, d);
+      const front = el('g', { transform:'rotate(-18)', 'clip-path':'url(#sat-front)' }, g);
+      rings(front);
+      break;
+    }
+
+    case 'uranus': {
+      el('ellipse', { rx:r*1.75, ry:r*.45, fill:'none', stroke:'#bfeef2', 'stroke-width':3, opacity:.35, transform:'rotate(78)' }, g);
+      el('circle', { r, fill: 'url(#g-uranus)' }, g);
+      const d = withClip(b, g);
+      el('ellipse', { cx:0, cy:-5, rx:r*.72, ry:4, fill:'#ffffff', opacity:.3 }, d);
+      el('ellipse', { cx:2, cy:9, rx:r*.6, ry:3, fill:'#ffffff', opacity:.2 }, d);
+      break;
+    }
+
+    case 'neptune': {
+      el('circle', { r, fill: 'url(#g-neptune)' }, g);
+      const d = withClip(b, g);
+      el('ellipse', { cx:-3, cy:-7, rx:12, ry:3, fill:'#cfe0ff', opacity:.4 }, d);
+      el('ellipse', { cx:5, cy:8, rx:10, ry:2.5, fill:'#cfe0ff', opacity:.3 }, d);
+      el('ellipse', { cx:-6, cy:4, rx:5, ry:3, fill:'#12246b', opacity:.55 }, d);
+      break;
+    }
+  }
+
+  if (b.id !== 'soleil') el('circle', { r, fill: 'url(#gloss)', 'pointer-events':'none' }, g); // reflet doux
+}
+
+/* construction + halo de sélection */
+for (const b of order) {
+  const g = el('g', { id: 'b-' + b.id }, gBodies);
+  b.g = g;
+  b.glowEl = el('circle', { class: 'body-glow', r: b.glowR || b.r + 16 }, g);
+  drawBody(b, g);
+}
+
+/* zones tactiles (par-dessus tout, invisibles et généreuses) */
+const gHits = document.getElementById('gHits');
+for (const b of order) {
+  b.hit = el('circle', { class:'hit', cx:b.x, cy:b.y, r: b.hitR || Math.max(b.r + 30, 56) }, gHits);
+  b.hit.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); onTap(b.id); });
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. LA FUSÉE : dessin                                                */
+/* ------------------------------------------------------------------ */
+const gRocket = document.getElementById('gRocket');
+const rocketOuter = el('g', {}, gRocket);
+const rocketScale = el('g', { transform: 'scale(1.45)' }, rocketOuter);
+
+const rocketFx = el('g', { class: 'rocketfx' }, rocketScale); // tremble pendant le compte à rebours
+
+const gFlame  = el('g', { class:'flameWrap' }, rocketFx);
+const gFlameS = el('g', { class:'flameSize' }, gFlame);
+const gFlameF = el('g', { class:'flameFlick' }, gFlameS);
+el('path', { d:'M -3.2 14 C -2 22 0 27 0 27 C 0 27 2 22 3.2 14 Z', fill:'#ff9d2e' }, gFlameF);
+el('path', { d:'M -1.7 14 C -1 19 0 22 0 22 C 0 22 1 19 1.7 14 Z', fill:'#ffe066' }, gFlameF);
+
+el('path', { d:'M-6.4 3 C -10.2 6.5 -11.2 11.5 -10.6 14.5 L -6 11 Z', fill:'#e8433f' }, rocketFx);
+el('path', { d:'M6.4 3 C 10.2 6.5 11.2 11.5 10.6 14.5 L 6 11 Z',     fill:'#e8433f' }, rocketFx);
+el('path', { d:'M6.6 -5 C 7.4 2 7 8.5 6 12 L -6 12 C -7 8.5 -7.4 2 -6.6 -5 Z', fill:'url(#g-rbody)' }, rocketFx);
+el('path', { d:'M-3.6 12 L3.6 12 L2.5 15 L-2.5 15 Z', fill:'#6b7280' }, rocketFx);
+el('path', { d:'M0 -18 C 4.5 -14 6.2 -9 6.6 -5 L -6.6 -5 C -6.2 -9 -4.5 -14 0 -18 Z', fill:'url(#g-rnose)' }, rocketFx);
+el('circle', { cx:0, cy:1.5, r:3.4, fill:'#aee1ff', stroke:'#e7edf7', 'stroke-width':1 }, rocketFx);
+
+/* ------------------------------------------------------------------ */
+/* 5. AUDIO : voix (fichier perso sinon synthèse) + bruitages générés  */
+/* ------------------------------------------------------------------ */
+let actx = null, master = null, muted = false, unlocked = false;
+function audioUnlock() {
+  if (unlocked) return; unlocked = true;
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
+    actx.resume();
+  } catch (e) { /* audio indisponible : le jeu continue en silence */ }
+  if (!music.players.length) buildMusic();
+  startMusic();
+}
+
+/* --- voix off : audio/xxx.mp3 si présent, sinon synthèse vocale --- */
+const EXTS = ['mp3', 'wav', 'ogg', 'm4a'];
+const vCache = new Map();
+let curAudio = null;
+
+let voiceSeq = 0; // jeton : une seule séquence vocale à la fois
+
+function resolveVoice(key) { // promet {audio} si un fichier existe, sinon {tts}
+  const c = vCache.get(key);
+  if (c) return Promise.resolve(c);
+  return new Promise(resolve => {
+    let done = false;
+    const attempt = i => {
+      if (i >= EXTS.length) { const r = { tts: true }; vCache.set(key, r); resolve(r); return; }
+      const a = new Audio(); a.preload = 'auto'; a.src = 'audio/' + key + '.' + EXTS[i];
+      a.addEventListener('canplaythrough', () => { if (done) return; done = true; const r = { audio: a }; vCache.set(key, r); resolve(r); }, { once: true });
+      a.addEventListener('error', () => { if (done) return; attempt(i + 1); }, { once: true });
+      setTimeout(() => { if (!done) { done = true; const r = { tts: true }; vCache.set(key, r); resolve(r); } }, 1500);
+      a.load();
+    };
+    attempt(0);
+  });
+}
+async function playVoiceAsync(key, tok) { // joue une voix et attend sa fin (chaînable)
+  if (muted) return;
+  const line = LINES[key]; if (!line) return;
+  const my = tok ?? ++voiceSeq;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  if (curAudio) { try { curAudio.pause(); } catch (e) {} }
+  const r = await resolveVoice(key);
+  if (my !== voiceSeq) return; // une voix plus récente a pris la main
+  if (r.audio) {
+    curAudio = r.audio;
+    r.audio.currentTime = 0;
+    try { await r.audio.play(); } catch (e) {}
+    await new Promise(res => {
+      const end = () => { r.audio.removeEventListener('ended', end); clearTimeout(guard); res(); };
+      r.audio.addEventListener('ended', end, { once: true });
+      const guard = setTimeout(end, ((r.audio.duration || 8) + 1) * 1000);
+    });
+  } else {
+    await new Promise(res => {
+      let fin = false;
+      const done = () => { if (!fin) { fin = true; res(); } };
+      speakTTS(line, done);
+      setTimeout(done, 9000);
+    });
+  }
+}
+function playVoice(key) { playVoiceAsync(key); } // usage simple : lance et oublie
+async function playSequence(keys) { // enchaîne des voix : accueil -> nom, compte...
+  const my = ++voiceSeq;
+  for (const k of keys) {
+    await playVoiceAsync(k, my);
+    if (my !== voiceSeq) return; // interrompue par un nouveau tap
+  }
+}
+function speakTTS(text, onend) {
+  if (!('speechSynthesis' in window)) { if (onend) onend(); return; }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'fr-FR'; u.rate = .85; u.pitch = 1.05;
+  if (onend) { u.onend = onend; u.onerror = onend; }
+  try {
+    const vs = speechSynthesis.getVoices();
+    const v = vs.find(v => /fr[-_]FR/i.test(v.lang)) || vs.find(v => /^fr/i.test(v.lang));
+    if (v) u.voice = v;
+  } catch (e) {}
+  speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) speechSynthesis.getVoices(); // précharge les voix
+
+/* --- musique d'ambiance : les morceaux s'enchaînent avec un fondu de 2 s ---
+   (variantes de casse testées pour chaque fichier : WAV/wav, selon le support) */
+const TRACK_SLOTS = [
+  ['soundtrack.wav', 'soundtrack.WAV', 'soundtrack.m4a'],
+  ['space track.mp3', 'space track.MP3'],
+];
+let musicOn = true, musicVol = .5;
+const music = { players: [], started: false, idx: 0, cur: null, next: null, fading: false, fadeStart: 0, fadeDur: 2000 };
+
+(function loadMusicPrefs() {
+  try {
+    const s = JSON.parse(localStorage.getItem('prefs-musique') || 'null');
+    if (s) {
+      if (typeof s.on  === 'boolean') musicOn = s.on;
+      if (typeof s.vol === 'number')  musicVol = Math.min(1, Math.max(0, s.vol));
+    }
+  } catch (e) {}
+})();
+function saveMusicPrefs() {
+  try { localStorage.setItem('prefs-musique', JSON.stringify({ on: musicOn, vol: musicVol })); } catch (e) {}
+}
+function effMusicVol() { return (muted || !musicOn) ? 0 : musicVol; }
+
+function buildMusic() {
+  TRACK_SLOTS.forEach(candidates => {
+    const a = new Audio();
+    a.preload = 'auto'; a.volume = 0;
+    let ci = 0;
+    a.addEventListener('error', () => { // ce nom n'existe pas -> variante suivante
+      ci++;
+      if (ci < candidates.length) { a.src = encodeURI('audio/' + candidates[ci]); a.load(); }
+      else a.dataset.broken = '1';
+    });
+    a.addEventListener('ended', () => { if (!music.fading && music.cur === a) switchTrack(true); });
+    a.src = encodeURI('audio/' + candidates[0]);
+    a.load();
+    music.players.push(a);
+  });
+}
+function startMusic() {
+  if (music.started || !music.players.length) return;
+  const first = music.players.find(p => !p.dataset.broken);
+  if (!first) return; // aucun morceau disponible : jeu sans musique
+  music.started = true;
+  music.cur = first;
+  first.volume = effMusicVol();
+  first.play().catch(() => { music.started = false; }); // réessai au prochain tap
+}
+function switchTrack(quick) {
+  const usable = music.players.filter(p => !p.dataset.broken);
+  if (!usable.length) return;
+  let ni = usable.indexOf(music.cur) + 1;
+  if (ni >= usable.length) ni = 0;
+  const b = usable[ni];
+  if (b === music.cur) { // un seul morceau : on le rejoue simplement
+    try { b.currentTime = 0; } catch (e) {}
+    b.play().catch(() => {});
+    return;
+  }
+  b.volume = 0;
+  b.play().catch(() => {});
+  music.next = b; music.fading = true;
+  music.fadeStart = performance.now();
+  music.fadeDur = quick ? 300 : 2000;
+}
+function updateMusic() { // appelé à chaque image par la boucle principale
+  if (!music.started || !music.cur) return;
+  if (music.fading && music.next) {
+    const k = Math.min(1, (performance.now() - music.fadeStart) / music.fadeDur);
+    const e = k * k * (3 - 2 * k); // fondu bien fluide aux deux extrémités
+    music.cur.volume  = effMusicVol() * (1 - e);
+    music.next.volume = effMusicVol() * e;
+    if (k >= 1) {
+      try { music.cur.pause(); music.cur.currentTime = 0; } catch (e2) {}
+      music.cur = music.next; music.next = null; music.fading = false;
+    }
+    return;
+  }
+  music.cur.volume = effMusicVol();
+  const c = music.cur;
+  if (c.duration && isFinite(c.duration) && !c.paused && c.duration - c.currentTime <= 2) switchTrack(false);
+}
+
+/* --- bruitages générés (Web Audio, aucun fichier) --- */
+function tone(freq0, freq1, dur, vol, type) {
+  if (!actx || muted) return;
+  const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(30, freq1), t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+}
+function chime() { // arrivée en orbite
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+    setTimeout(() => tone(f, f, .55, .16, 'sine'), i * 95));
+}
+function sparkleSfx() {
+  for (let i = 0; i < 5; i++)
+    setTimeout(() => tone(1200 + Math.random() * 1200, 1800, .14, .06, 'sine'), i * 40);
+}
+function blip() { tone(680, 920, .09, .12, 'sine'); }
+function thump() { tone(150, 65, .2, .4, 'sine'); }
+function whoosh(strong) {
+  if (!actx || muted) return;
+  const t = actx.currentTime, dur = strong ? .55 : .35;
+  const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = actx.createBufferSource(); src.buffer = buf;
+  const f = actx.createBiquadFilter(); f.type = 'lowpass';
+  f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(220, t + dur);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(.001, t);
+  g.gain.exponentialRampToValueAtTime(strong ? .35 : .22, t + dur * .25);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  src.connect(f); f.connect(g); g.connect(master); src.start(t);
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. PARTICULES : traînée, étincelles, poussière                      */
+/* ------------------------------------------------------------------ */
+const gTrail = document.getElementById('gTrail'), gFx = document.getElementById('gFx');
+const trailP = [], fxP = [];
+function spawnTrail(x, y, couleur) {
+  if (trailP.length > 160) return;
+  const n = el('circle', { cx:x, cy:y, r:3.4, fill: couleur || (Math.random() < .5 ? '#ffd27a' : '#ff9d5c') }, gTrail);
+  trailP.push({ n, life: .5, max: .5 });
+}
+function sparkles(x, y, nb) {
+  const cols = ['#ffe066', '#9fd8ff', '#ff9ecb', '#ffffff'];
+  for (let i = 0; i < nb; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 130;
+    const n = el('circle', { cx:x, cy:y, r:2.4 + Math.random() * 1.8, fill: cols[(Math.random()*cols.length)|0] }, gFx);
+    fxP.push({ n, x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:.7 + Math.random()*.4, max:1 });
+  }
+}
+function dust(x, y) {
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI/2 + (Math.random() - .5) * 2.4, sp = 40 + Math.random() * 70;
+    const n = el('circle', { cx:x, cy:y, r:3 + Math.random() * 2.4, fill:'#b9b3a6' }, gFx);
+    fxP.push({ n, x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:.6 + Math.random()*.3, max:.9 });
+  }
+}
+function updateParticles(dt) {
+  for (let i = trailP.length - 1; i >= 0; i--) {
+    const p = trailP[i]; p.life -= dt;
+    if (p.life <= 0) { p.n.remove(); trailP.splice(i, 1); continue; }
+    p.n.setAttribute('opacity', (p.life / p.max * .8).toFixed(2));
+    p.n.setAttribute('r', (p.life / p.max * 3.4).toFixed(2));
+  }
+  for (let i = fxP.length - 1; i >= 0; i--) {
+    const p = fxP[i]; p.life -= dt;
+    if (p.life <= 0) { p.n.remove(); fxP.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 55 * dt;
+    p.n.setAttribute('cx', p.x.toFixed(1)); p.n.setAttribute('cy', p.y.toFixed(1));
+    p.n.setAttribute('opacity', Math.min(1, p.life).toFixed(2));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 6bis. AMBIANCE : étoiles filantes + navette espionne                */
+/* ------------------------------------------------------------------ */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* --- étoiles filantes : rares, discrètes, jamais pressées --- */
+const gShooting = document.getElementById('gShooting');
+const shooting = { items: [], next: 5 + Math.random() * 8, seen: 0 };
+
+function spawnShootingStar() {
+  shooting.seen++;
+  const a = (Math.random() < .5 ? 25 : 155) + (Math.random() * 14 - 7); // diagonale descendante
+  const ang = a * D2R, sp = 680 + Math.random() * 240;
+  const g = el('g', { opacity: '0' }, gShooting);
+  el('line', { x1: -6, y1: 0, x2: -135, y2: 0, stroke: 'url(#g-etoile)', 'stroke-width': 2.6, 'stroke-linecap': 'round' }, g);
+  el('circle', { r: 6, fill: '#fff', opacity: .22 }, g);
+  el('circle', { r: 2.6, fill: '#fff' }, g);
+  const life0 = .9 + Math.random() * .45;
+  shooting.items.push({
+    g, x: 150 + Math.random() * 1500, y: 60 + Math.random() * 480,
+    vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, angle: a,
+    life: life0, max: life0,
+  });
+}
+function updateShooting(dt) {
+  shooting.next -= dt;
+  if (shooting.next <= 0) { shooting.next = 7 + Math.random() * 11; spawnShootingStar(); }
+  for (let i = shooting.items.length - 1; i >= 0; i--) {
+    const s = shooting.items[i];
+    s.life -= dt;
+    if (s.life <= 0) { s.g.remove(); shooting.items.splice(i, 1); continue; }
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    const k = s.life / s.max, p = 1 - k;
+    const op = Math.min(1, p * 3.5) * Math.min(1, k * 2.8); // apparition vite, fondu final
+    s.g.setAttribute('transform', `translate(${s.x.toFixed(1)},${s.y.toFixed(1)}) rotate(${s.angle})`);
+    s.g.setAttribute('opacity', op.toFixed(2));
+  }
+}
+
+/* --- navette : traverse le système en slalom, fuit si elle croise la fusée --- */
+const gShuttle = document.getElementById('gShuttle');
+const shuttle = { g: null, active: false, fleeing: false, x: 0, y: 0, head: 0, speed: 145,
+                  t: 0, fleeHead: 0, wps: [], wi: 0, next: 20 + Math.random() * 25, fuites: 0 };
+
+(function buildShuttle() {
+  const g = el('g', { display: 'none' }, gShuttle);
+  const S = el('g', { transform: 'scale(1.15)' }, g); // vue de dessus, nez vers la droite
+  el('path', { d:'M1 -3.2 L-14 -13.5 L-8.5 -2.8 Z', fill:'#d7deec' }, S); // aile haute
+  el('path', { d:'M1 3.2 L-14 13.5 L-8.5 2.8 Z',  fill:'#c3ccdd' }, S);  // aile basse
+  el('path', { d:'M-9 -3 L-14 -7 L-13.5 -2.8 Z', fill:'#5a6584' }, S);   // aileron haut
+  el('path', { d:'M-9 3 L-14 7 L-13.5 2.8 Z',   fill:'#4a5473' }, S);    // aileron bas
+  el('path', { d:'M17 0 C 13 -3.4 2 -4.6 -14 -3.2 L -14 3.2 C 2 4.6 13 3.4 17 0 Z', fill:'url(#g-navette)' }, S); // fuselage
+  el('path', { d:'M14.5 0 C 13 -1.6 10.5 -2.1 8.8 -1.8 L 8.8 1.8 C 10.5 2.1 13 1.6 14.5 0 Z', fill:'#9fd8ff', stroke:'#e7edf7', 'stroke-width':.6 }, S); // verrière
+  el('path', { d:'M14.5 1.4 C 8 3.6 -2 4.3 -13 3.5', fill:'none', stroke:'#5a6584', 'stroke-width':1, opacity:.65 }, S); // liseré ventral
+  el('circle', { cx:-14.6, cy:-1.6, r:1.1, fill:'#ffd9a0', opacity:.9 }, S); // tuyères
+  el('circle', { cx:-14.6, cy: 1.6, r:1.1, fill:'#ffd9a0', opacity:.9 }, S);
+  shuttle.g = g;
+})();
+
+function launchShuttle(via) {
+  const m = 130; // marge hors champ
+  const bords = [
+    { x: -m, y: 150 + Math.random() * 950 },
+    { x: 1800 + m, y: 150 + Math.random() * 950 },
+    { x: 150 + Math.random() * 1500, y: -m },
+    { x: 150 + Math.random() * 1500, y: 1250 + m },
+  ];
+  const ei = (Math.random() * 4) | 0;
+  const oi = (ei + 1 + ((Math.random() * 3) | 0)) % 4;
+  const wps = [bords[ei]];
+  if (via) wps.push(via); // point de passage imposé (croisement souhaité)
+  for (let i = 1; i <= 3; i++) { // slalom harmonieux entre l'entrée et la sortie
+    const k = i / 4;
+    wps.push({
+      x: clamp(bords[ei].x + (bords[oi].x - bords[ei].x) * k + (Math.random() * 480 - 240), 160, 1640),
+      y: clamp(bords[ei].y + (bords[oi].y - bords[ei].y) * k + (Math.random() * 400 - 200), 130, 1120),
+    });
+  }
+  wps.push(bords[oi]);
+  shuttle.wps = wps; shuttle.wi = 1;
+  shuttle.x = bords[ei].x; shuttle.y = bords[ei].y;
+  shuttle.head = Math.atan2(wps[1].y - shuttle.y, wps[1].x - shuttle.x);
+  shuttle.speed = 145; shuttle.t = 0; shuttle.fleeing = false; shuttle.active = true;
+  shuttle.g.removeAttribute('display');
+}
+function hideShuttle() {
+  shuttle.active = false;
+  shuttle.g.setAttribute('display', 'none');
+  shuttle.next = 45 + Math.random() * 45; // rare : la prochaine visite attendra
+}
+function updateShuttle(dt) {
+  if (!shuttle.active) {
+    shuttle.next -= dt;
+    if (shuttle.next <= 0) launchShuttle();
+    return;
+  }
+  shuttle.t += dt;
+  let tx, ty, turnRate = 1.4; // virages doux en balade
+
+  if (shuttle.fleeing) { // panique : cap au plus loin de la fusée, à toute vitesse
+    tx = shuttle.x + Math.cos(shuttle.fleeHead) * 600;
+    ty = shuttle.y + Math.sin(shuttle.fleeHead) * 600;
+    shuttle.speed = Math.min(shuttle.speed + 950 * dt, 640);
+    turnRate = 4.5;
+    if (shuttle.t > 6) { hideShuttle(); return; } // filet de sécurité
+  } else {
+    const wp = shuttle.wps[shuttle.wi];
+    tx = wp.x; ty = wp.y;
+    if (Math.hypot(tx - shuttle.x, ty - shuttle.y) < 70) {
+      shuttle.wi++;
+      if (shuttle.wi >= shuttle.wps.length) { hideShuttle(); return; } // sortie naturelle
+    }
+    shuttle.speed = 145;
+  }
+
+  shuttle.head = turnTo(shuttle.head, Math.atan2(ty - shuttle.y, tx - shuttle.x), turnRate * dt);
+  shuttle.x += Math.cos(shuttle.head) * shuttle.speed * dt;
+  shuttle.y += Math.sin(shuttle.head) * shuttle.speed * dt;
+  shuttle.g.setAttribute('transform',
+    `translate(${shuttle.x.toFixed(1)},${shuttle.y.toFixed(1)}) rotate(${deg(shuttle.head).toFixed(1)})`);
+
+  // la navette croise-t-elle la fusée ?
+  if (!shuttle.fleeing) {
+    const R = rocket;
+    if (Math.hypot(R.x - shuttle.x, R.y - shuttle.y) < 95) {
+      shuttle.fleeing = true; shuttle.t = 0; shuttle.fuites++;
+      shuttle.fleeHead = Math.atan2(shuttle.y - R.y, shuttle.x - R.x); // à l'opposé de la fusée
+      shuttle.speed = Math.max(shuttle.speed, 280);
+      sparkles(shuttle.x, shuttle.y, 10); // petit sursaut
+      tone(880, 1560, .18, .12); tone(620, 930, .16, .1); // "ooh !"
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 6ter. AMBIANCE (suite) : satellite humain lent + ovni fantasque     */
+/* ------------------------------------------------------------------ */
+
+/* --- satellite : traverse tout l'écran, très lentement, sans interaction --- */
+const satellite = { g: null, active: false, x: 0, y: 0, t: 0,
+                    ax: 0, ay: 0, bx: 0, by: 0, len: 0, sp: 0, ang: 0,
+                    next: 50 + Math.random() * 50, traversees: 0 };
+
+(function buildSatellite() {
+  const g = el('g', { display: 'none' }, gShuttle);
+  const S = el('g', { transform: 'scale(1.1)' }, g);
+  el('rect', { x:-23, y:-4.5, width:12, height:9, rx:1, fill:'#2d4a8f' }, S); // panneau solaire gauche
+  el('rect', { x:-21.5, y:-4.5, width:1.2, height:9, fill:'#1b2f63' }, S);
+  el('rect', { x:-17.5, y:-4.5, width:1.2, height:9, fill:'#1b2f63' }, S);
+  el('rect', { x:11, y:-4.5, width:12, height:9, rx:1, fill:'#2d4a8f' }, S);  // panneau solaire droit
+  el('rect', { x:12.5, y:-4.5, width:1.2, height:9, fill:'#1b2f63' }, S);
+  el('rect', { x:16.5, y:-4.5, width:1.2, height:9, fill:'#1b2f63' }, S);
+  el('rect', { x:-10, y:-5.5, width:20, height:11, rx:2.5, fill:'url(#g-sat)' }, S); // corps métallique
+  el('circle', { cx:9.8, cy:0, r:3.2, fill:'#d9dde6', stroke:'#8b95a8', 'stroke-width':.8 }, S); // antenne
+  el('circle', { cx:9.8, cy:0, r:1, fill:'#5d6678' }, S);
+  el('circle', { cx:-6, cy:-4.4, r:1.3, fill:'#ff5252', class:'clignote' }, S); // feu clignotant
+  satellite.g = g;
+})();
+
+function launchSatellite() {
+  const m = 90;
+  const bords = [
+    { x: -m, y: 150 + Math.random() * 950 },
+    { x: 1800 + m, y: 150 + Math.random() * 950 },
+    { x: 150 + Math.random() * 1500, y: -m },
+    { x: 150 + Math.random() * 1500, y: 1250 + m },
+  ];
+  const ei = (Math.random() * 4) | 0;
+  const oi = (ei + 2) % 4; // plutôt en face : belle traversée complète
+  satellite.ax = bords[ei].x; satellite.ay = bords[ei].y;
+  satellite.bx = bords[oi].x; satellite.by = bords[oi].y;
+  satellite.len = Math.hypot(satellite.bx - satellite.ax, satellite.by - satellite.ay);
+  satellite.ang = Math.atan2(satellite.by - satellite.ay, satellite.bx - satellite.ax);
+  satellite.sp = 55 + Math.random() * 20; // lentement...
+  satellite.t = 0; satellite.traversees++; satellite.active = true;
+  satellite.g.removeAttribute('display');
+}
+function updateSatellite(dt) {
+  if (!satellite.active) {
+    satellite.next -= dt;
+    if (satellite.next <= 0) launchSatellite();
+    return;
+  }
+  satellite.t += dt;
+  const d = satellite.sp * satellite.t;
+  if (d >= satellite.len + 40) { // sortie : on programme la prochaine (rare)
+    satellite.active = false;
+    satellite.g.setAttribute('display', 'none');
+    satellite.next = 90 + Math.random() * 90;
+    return;
+  }
+  const wob = Math.sin(satellite.t * .5) * 6; // légère dérive, comme une dérive d'orbite
+  satellite.x = satellite.ax + Math.cos(satellite.ang) * d - Math.sin(satellite.ang) * wob;
+  satellite.y = satellite.ay + Math.sin(satellite.ang) * d + Math.cos(satellite.ang) * wob;
+  satellite.g.setAttribute('transform',
+    `translate(${satellite.x.toFixed(1)},${satellite.y.toFixed(1)}) rotate(${deg(satellite.ang).toFixed(1)})`);
+}
+
+/* --- ovni : soucoupe en vue de profil, vol nerveux, fuite en zigzag --- */
+const ovni = { g: null, tiltG: null, active: false, fleeing: false, x: 0, y: 0, head: 0, speed: 0,
+               t: 0, phase: 0, fleeHead: 0, trailT: 0, tilt: 0, wps: [], wi: 0,
+               next: 60 + Math.random() * 60, surprises: 0 };
+
+(function buildOvni() {
+  const g = el('g', { display: 'none' }, gShuttle);
+  const tilt = el('g', {}, g); // la soucoupe reste horizontale : elle se penche dans les virages
+  const S = el('g', { transform: 'scale(1.25)' }, tilt);
+  el('ellipse', { cx:0, cy:8.5, rx:10, ry:2.6, fill:'#7cf29c', opacity:.22 }, S); // lueur dessous
+  el('path', { d:'M-17 -1 C -17 -8 17 -8 17 -1 C 17 6 -17 6 -17 -1 Z', fill:'url(#g-ovni)' }, S); // coque en lentille
+  el('path', { d:'M-17 -1 C -17 2.5 17 2.5 17 -1', fill:'none', stroke:'#6f7f94', 'stroke-width':1.1, opacity:.8 }, S); // ceinture
+  el('path', { d:'M-7 -6.5 A 7 7 0 0 1 7 -6.5 Z', fill:'#aef0cf', opacity:.92, stroke:'#e8fff4', 'stroke-width':.7 }, S); // dôme
+  el('circle', { cx:0, cy:-9.2, r:2.7, fill:'#4aa86c' }, S); // petit extraterrestre
+  el('circle', { cx:-1, cy:-9.6, r:.55, fill:'#163020' }, S); // ses deux yeux
+  el('circle', { cx:1,  cy:-9.6, r:.55, fill:'#163020' }, S);
+  [[-11,.5],[-4,2.4],[4,2.4],[11,.5]].forEach((p, i) => { // feux en cadence
+    const f = el('circle', { cx:p[0], cy:p[1], r:1.7, fill:['#ffe066','#7cf29c','#9fd8ff','#ff9ecb'][i], class:'ovni-feux' }, S);
+    f.style.animationDelay = (i * .22) + 's';
+  });
+  ovni.g = g; ovni.tiltG = tilt;
+})();
+
+function launchOvni() {
+  const m = 130;
+  const bords = [
+    { x: -m, y: 150 + Math.random() * 950 },
+    { x: 1800 + m, y: 150 + Math.random() * 950 },
+    { x: 150 + Math.random() * 1500, y: -m },
+    { x: 150 + Math.random() * 1500, y: 1250 + m },
+  ];
+  const ei = (Math.random() * 4) | 0;
+  const oi = (ei + 1 + ((Math.random() * 3) | 0)) % 4;
+  const wps = [bords[ei]];
+  for (let i = 1; i <= 4; i++) { // 4 étapes : balade longue et chaotique
+    const k = i / 5;
+    wps.push({
+      x: clamp(bords[ei].x + (bords[oi].x - bords[ei].x) * k + (Math.random() * 680 - 340), 160, 1640),
+      y: clamp(bords[ei].y + (bords[oi].y - bords[ei].y) * k + (Math.random() * 560 - 280), 130, 1120),
+    });
+  }
+  wps.push(bords[oi]);
+  ovni.wps = wps; ovni.wi = 1;
+  ovni.x = bords[ei].x; ovni.y = bords[ei].y;
+  ovni.head = Math.atan2(wps[1].y - ovni.y, wps[1].x - ovni.x);
+  ovni.speed = 120; ovni.t = 0; ovni.phase = Math.random() * 6.28;
+  ovni.fleeing = false; ovni.active = true;
+  ovni.g.removeAttribute('display');
+}
+function hideOvni() {
+  ovni.active = false;
+  ovni.g.setAttribute('display', 'none');
+  ovni.next = 120 + Math.random() * 120; // très rare
+}
+function updateOvni(dt) {
+  if (!ovni.active) {
+    ovni.next -= dt;
+    if (ovni.next <= 0) launchOvni();
+    return;
+  }
+  ovni.t += dt;
+  let capVise;
+
+  if (ovni.fleeing) { // panique extraterrestre : fuite en zigzag serré
+    ovni.speed = Math.min(ovni.speed + 1100 * dt, 720);
+    capVise = ovni.fleeHead + Math.sin(ovni.t * 9) * .9;
+    ovni.head = turnTo(ovni.head, capVise, 6 * dt);
+    ovni.x += Math.cos(ovni.head) * ovni.speed * dt;
+    ovni.y += Math.sin(ovni.head) * ovni.speed * dt;
+    ovni.trailT += dt;
+    if (ovni.trailT > .05) { ovni.trailT = 0; spawnTrail(ovni.x, ovni.y, '#7cf29c'); } // traînée verte
+    if (ovni.t > 5) { hideOvni(); return; }
+  } else {
+    const wp = ovni.wps[ovni.wi];
+    if (Math.hypot(wp.x - ovni.x, wp.y - ovni.y) < 130) {
+      ovni.wi++;
+      if (ovni.wi >= ovni.wps.length) { hideOvni(); return; }
+    }
+    const cible = ovni.wps[ovni.wi];
+    const vers = Math.atan2(cible.y - ovni.y, cible.x - ovni.x);
+    // vol nerveux : serpentin composé + vitesse qui varie beaucoup (parfois quasi l'arrêt)
+    capVise = vers + Math.sin(ovni.t * 2.6 + ovni.phase) * .55 + Math.sin(ovni.t * 4.3 + ovni.phase * 2) * .25;
+    ovni.head = turnTo(ovni.head, capVise, 3.2 * dt);
+    ovni.speed = 55 + Math.abs(Math.sin(ovni.t * 1.7 + ovni.phase)) * 175;
+    ovni.x += Math.cos(ovni.head) * ovni.speed * dt;
+    ovni.y += Math.sin(ovni.head) * ovni.speed * dt;
+  }
+
+  // vue de profil : la soucoupe reste horizontale et se penche selon le virage
+  const ecart = angleDiff(capVise, ovni.head);
+  const penche = clamp(ecart, -.7, .7) * -22;
+  ovni.tilt += (penche - ovni.tilt) * Math.min(1, 6 * dt);
+  ovni.g.setAttribute('transform', `translate(${ovni.x.toFixed(1)},${ovni.y.toFixed(1)})`);
+  ovni.tiltG.setAttribute('transform', `rotate(${ovni.tilt.toFixed(1)})`);
+
+  // rencontre avec la fusée : surprise totale !
+  if (!ovni.fleeing) {
+    const R = rocket;
+    if (Math.hypot(R.x - ovni.x, R.y - ovni.y) < 95) {
+      ovni.fleeing = true; ovni.t = 0; ovni.surprises++;
+      ovni.fleeHead = Math.atan2(ovni.y - R.y, ovni.x - R.x);
+      ovni.speed = Math.max(ovni.speed, 300);
+      sparkles(ovni.x, ovni.y, 14);
+      tone(480, 980, .16, .13); setTimeout(() => tone(980, 430, .22, .13), 150); // "woop !"
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. LA FUSÉE : machine à états                                       */
+/*   landed → liftoff → traveling → arriving → orbiting                */
+/*   (et descending → landed quand l'enfant rappelle la fusée sur      */
+/*    la Terre ; hop = petit saut de joie sur place)                   */
+/* ------------------------------------------------------------------ */
+const ANCHOR = -Math.PI / 2;          // point d'atterrissage : le "haut" de la Terre
+const CRUISE = 430, ACC = 820, TURN = 3.4;
+const LIFT_T = .55, LIFT_H = 150, ARR_T = .7, ORB_W = 1.15;
+
+const rocket = {
+  state: 'landed', target: 'terre',
+  x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0,
+  rot: 0, head: -Math.PI / 2, speed: 0,
+  dir: 1, t: 0, arr: null, orbTh: 0, orbR: 0,
+};
+
+function updateRocket(dt) {
+  const R = rocket, tgt = bodies[R.target];
+  R.px = R.x; R.py = R.y;
+
+  switch (R.state) {
+
+    case 'landed':
+    case 'hop': {
+      const e = bodies.terre, d = e.r + 14;
+      R.x = e.x + Math.cos(ANCHOR) * d;
+      R.y = e.y + Math.sin(ANCHOR) * d;
+      R.rot = deg(ANCHOR) + 90;
+      if (R.state === 'hop') {
+        R.t += dt;
+        const off = Math.sin(Math.min(R.t / .7, 1) * Math.PI) * 46;
+        R.x += Math.cos(ANCHOR) * off; R.y += Math.sin(ANCHOR) * off;
+        if (R.t >= .7) R.state = 'landed';
+      }
+      break;
+    }
+
+    case 'liftoff': { // décollage vertical depuis la Terre
+      R.t += dt;
+      const e = bodies.terre;
+      const k = easeOut(Math.min(R.t / LIFT_T, 1));
+      const d = e.r + 14 + k * LIFT_H;
+      R.x = e.x + Math.cos(ANCHOR) * d;
+      R.y = e.y + Math.sin(ANCHOR) * d;
+      R.rot = deg(ANCHOR) + 90;
+      if (R.t >= LIFT_T) { R.state = 'traveling'; R.speed = 150; R.head = ANCHOR; }
+      break;
+    }
+
+    case 'traveling': { // poursuite de l'astre cible (qui bouge !)
+      R.speed = Math.min(R.speed + ACC * dt, CRUISE);
+      const dx = tgt.x - R.x, dy = tgt.y - R.y, dist = Math.hypot(dx, dy);
+      R.head = turnTo(R.head, Math.atan2(dy, dx), TURN * dt);
+      R.x += Math.cos(R.head) * R.speed * dt;
+      R.y += Math.sin(R.head) * R.speed * dt;
+      R.rot = deg(R.head) + 90;
+      if (R.target === 'terre') {
+        if (dist < tgt.r + 200) R.state = 'descending';
+      } else {
+        const orbR = tgt.r + (tgt.orbitGap || 30);
+        if (dist < orbR + 95) {
+          R.arr = {
+            t: 0, orbR, dir: R.dir,
+            r0:  Math.hypot(R.x - tgt.x, R.y - tgt.y),
+            th0: Math.atan2(R.y - tgt.y, R.x - tgt.x),
+            rot0: R.rot,
+          };
+          R.state = 'arriving';
+        }
+      }
+      break;
+    }
+
+    case 'arriving': { // transition douce vers l'orbite circulaire
+      const a = R.arr; a.t += dt;
+      const k = smooth(Math.min(a.t / ARR_T, 1));
+      const th = a.th0 + ORB_W * a.dir * a.t;
+      const rr = a.r0 + (a.orbR - a.r0) * k;
+      R.x = tgt.x + Math.cos(th) * rr;
+      R.y = tgt.y + Math.sin(th) * rr;
+      R.rot = lerpDeg(a.rot0, deg(th) + 90 * a.dir + 90, k);
+      if (a.t >= ARR_T) { R.state = 'orbiting'; R.orbTh = th; R.orbR = a.orbR; onArrive(); }
+      break;
+    }
+
+    case 'orbiting': { // l'astre devient le centre du monde de la fusée
+      R.orbTh += ORB_W * R.dir * dt;
+      R.x = tgt.x + Math.cos(R.orbTh) * R.orbR;
+      R.y = tgt.y + Math.sin(R.orbTh) * R.orbR;
+      R.rot = deg(R.orbTh) + 90 * R.dir + 90;
+      break;
+    }
+
+    case 'descending': { // retour doux vers le point d'atterrissage terrestre
+      const e = bodies.terre, d = e.r + 13;
+      const ax = e.x + Math.cos(ANCHOR) * d, ay = e.y + Math.sin(ANCHOR) * d;
+      const dx = ax - R.x, dy = ay - R.y, dist = Math.hypot(dx, dy) || 1e-6;
+      const sp = Math.min(250, Math.max(50, dist * 2.8));
+      R.x += dx / dist * sp * dt;
+      R.y += dy / dist * sp * dt;
+      R.rot = lerpDeg(R.rot, deg(ANCHOR) + 90, Math.min(1, 3.5 * dt));
+      if (dist < 4) { R.state = 'landed'; touchdown(); }
+      break;
+    }
+  }
+
+  R.vx = (R.x - R.px) / dt; R.vy = (R.y - R.py) / dt;
+
+  rocketOuter.setAttribute('transform', `translate(${R.x.toFixed(1)},${R.y.toFixed(1)}) rotate(${R.rot.toFixed(1)})`);
+  const thrusting = R.state === 'liftoff' || R.state === 'traveling' || R.state === 'arriving' || R.state === 'descending';
+  gFlame.classList.toggle('on', thrusting);
+  gFlame.classList.toggle('small', R.state === 'descending');
+
+  if (thrusting) { // traînée
+    R.trailT = (R.trailT || 0) + dt;
+    if (R.trailT > .028) {
+      R.trailT = 0;
+      const hx = Math.cos((R.rot - 90) * D2R), hy = Math.sin((R.rot - 90) * D2R);
+      spawnTrail(R.x - hx * 16, R.y - hy * 16);
+    }
+  }
+}
+
+function onArrive() { chime(); sparkles(rocket.x, rocket.y, 14); }
+function touchdown() { thump(); dust(rocket.x, rocket.y + 10); sparkles(rocket.x, rocket.y, 8); chime(); }
+
+/* ------------------------------------------------------------------ */
+/* 8. INTERACTIONS                                                     */
+/* ------------------------------------------------------------------ */
+let hintDone = false;
+function hideHint() {
+  if (hintDone) return; hintDone = true;
+  const h = document.getElementById('hint');
+  h.classList.add('hide'); setTimeout(() => h.remove(), 700);
+}
+
+function selectGlow(id) {
+  for (const b of order) b.glowEl.classList.toggle('on', b.id === id);
+  if (id === 'soleil' && sunVis) { // le Soleil se réjouit
+    sunVis.classList.remove('cheer');
+    void sunVis.getBoundingClientRect();
+    sunVis.classList.add('cheer');
+  }
+}
+
+let firstTapDone = false;   // accueil.mp3 n'est joué qu'au tout premier tap
+let countdownDone = false;  // compte.mp3 n'est joué qu'au tout premier décollage
+
+function onTap(id) {
+  if (intro.phase !== 'jeu') return; // pendant l'écran de démarrage, le jeu attend
+  audioUnlock(); hideHint();
+  selectGlow(id);
+
+  const R = rocket;
+  const first = !firstTapDone;
+  firstTapDone = true;
+  // au premier tap, l'accueil précède la voix de l'astre
+  const dire = first ? k => playSequence(['accueil', k]) : playVoice;
+
+  if (id === 'terre' && (R.state === 'landed')) { // déjà à la maison → petit saut de joie
+    dire('terre');
+    R.state = 'hop'; R.t = 0; blip();
+    sparkles(bodies.terre.x, bodies.terre.y - 60, 10);
+    return;
+  }
+  if (R.state === 'orbiting' && R.target === id) { // re-taper le même astre : féérie
+    dire(id);
+    sparkles(R.x, R.y, 12); sparkleSfx();
+    return;
+  }
+  if (R.state === 'descending' && id === 'terre') return; // atterrissage déjà en cours
+
+  // sens d'orbite selon le sens de passage actuel de la fusée
+  const tb = bodies[id];
+  const rx = R.x - tb.x, ry = R.y - tb.y;
+  R.dir = (rx * R.vy - ry * R.vx) >= 0 ? 1 : -1;
+  R.target = id;
+
+  if (R.state === 'landed' || R.state === 'hop') {
+    if (!countdownDone) { // premier décollage : nom de l'astre, compte à rebours, puis envol
+      countdownDone = true;
+      rocketFx.classList.add('countdown');
+      const suite = first ? ['accueil', id, 'compte'] : [id, 'compte'];
+      playSequence(suite).finally(() => {
+        rocketFx.classList.remove('countdown');
+        if (R.state === 'landed' || R.state === 'hop') { // si l'enfant n'a pas déjà relancé
+          R.state = 'liftoff'; R.t = 0; whoosh(true);
+        }
+      });
+      return;
+    }
+    dire(id);
+    R.state = 'liftoff'; R.t = 0; whoosh(true);
+  } else {
+    dire(id);
+    if (R.state !== 'liftoff') {
+      R.state = 'traveling';
+      if (R.speed < 160) R.speed = 160;
+      whoosh(false);
+    }
+  }
+}
+
+/* tap sur le vide : petite magie, jamais d'échec */
+SVG.addEventListener('pointerdown', ev => {
+  audioUnlock(); hideHint();
+  if (!firstTapDone) { firstTapDone = true; playVoice('accueil'); } // tout premier tap
+  const pt = SVG.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const p = pt.matrixTransform(SVG.getScreenCTM().inverse());
+  blip(); sparkles(p.x, p.y, 4);
+});
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick',   e => e.preventDefault());
+document.addEventListener('pointerdown', () => startMusic()); // réessai si l'autoplay a été refusé
+
+/* ------------------------------------------------------------------ */
+/* 8bis. ÉCRAN DE DÉMARRAGE : gros plan sur la Terre et la fusée,      */
+/*   les enfants montent à bord en sautillant, puis dézoom vers le jeu */
+/* ------------------------------------------------------------------ */
+const gCamera = document.getElementById('gCamera');
+const gKids = document.getElementById('gKids');
+const ZOOM_INTRO = 6.5, DUREE_DEZOOM = 1.7;
+const intro = { phase: 'attente', t: 0, kids: [] };
+
+function buildKid(fille) { // deux petits personnages vue de face
+  const g = el('g', {}, gKids);
+  const S = el('g', { transform: 'scale(1.15)' }, g);
+  if (fille) {
+    el('circle', { cx:0,   cy:-9.2, r:5.1, fill:'#6b4a2f' }, S);   // chevelure
+    el('circle', { cx:-5.6, cy:-11, r:2.5, fill:'#6b4a2f' }, S);   // couettes
+    el('circle', { cx:5.6,  cy:-11, r:2.5, fill:'#6b4a2f' }, S);
+    el('circle', { cx:0, cy:-8.4, r:3.5, fill:'#ffd9b3' }, S);     // visage
+    el('path', { d:'M0 -5.4 L4.6 4.4 L-4.6 4.4 Z', fill:'#e8433f' }, S); // robe
+    el('rect', { x:-3,   y:4, width:1.7, height:4.2, rx:.8, fill:'#6b4a2f' }, S); // jambes
+    el('rect', { x:1.3,  y:4, width:1.7, height:4.2, rx:.8, fill:'#6b4a2f' }, S);
+  } else {
+    el('circle', { cx:0, cy:-9.7, r:3.9, fill:'#2f2a26' }, S);     // chevelure
+    el('circle', { cx:0, cy:-8.1, r:3.6, fill:'#ffd9b3' }, S);     // visage
+    el('rect', { x:-4.2, y:-5.2, width:8.4, height:6.2, rx:1.6, fill:'#3f7fd9' }, S); // tee-shirt
+    el('rect', { x:-3.4, y:.8,  width:6.8, height:3,   rx:1,   fill:'#37415e' }, S); // short
+    el('rect', { x:-2.6, y:3.6, width:1.7, height:4.6, rx:.8, fill:'#2f2a26' }, S); // jambes
+    el('rect', { x:1,    y:3.6, width:1.7, height:4.6, rx:.8, fill:'#2f2a26' }, S);
+  }
+  return g;
+}
+// la petite fille part à gauche, le petit garçon à droite (décalé)
+intro.kids = [
+  { g: buildKid(true),  a0: -Math.PI/2 - .42, a1: -Math.PI/2 - .07, depart: 0,   fini: false },
+  { g: buildKid(false), a0: -Math.PI/2 + .42, a1: -Math.PI/2 + .07, depart: .45, fini: false },
+];
+
+const introTap = document.getElementById('introTap');
+const titreIntro = document.getElementById('titreIntro');
+introTap.addEventListener('pointerdown', ev => {
+  ev.preventDefault();
+  introTap.remove();
+  audioUnlock();          // la musique démarre avec l'embarquement
+  hideHint();
+  tone(520, 780, .12, .12); setTimeout(() => tone(660, 990, .12, .12), 140); // petits rires
+  intro.phase = 'embarquement'; intro.t = 0;
+});
+
+function poseKid(k, a, d) { // place un enfant sur la surface de la Terre
+  const e = bodies.terre;
+  k.g.setAttribute('transform', `translate(${(e.x + Math.cos(a) * d).toFixed(1)},${(e.y + Math.sin(a) * d).toFixed(1)})`);
+}
+
+function updateIntro(dt) {
+  const e = bodies.terre;
+
+  if (intro.phase === 'attente') { // les enfants sautillent doucement en attendant
+    intro.t += dt;
+    intro.kids.forEach((k, i) => {
+      const bob = Math.abs(Math.sin(intro.t * 3 + i * 1.3)) * 1.5;
+      poseKid(k, k.a0, e.r + 5.5 + bob);
+    });
+
+  } else if (intro.phase === 'embarquement') { // petits bonds jusqu'à la fusée
+    intro.t += dt;
+    let tousABord = true;
+    intro.kids.forEach(k => {
+      if (k.fini) return;
+      const t = intro.t - k.depart;
+      if (t < 0) { poseKid(k, k.a0, e.r + 5.5 + Math.abs(Math.sin(intro.t * 3)) * 1.5); tousABord = false; return; }
+      const kk = Math.min(1, t / 2.2);
+      if (kk >= 1) { // à bord !
+        k.fini = true;
+        k.g.setAttribute('display', 'none');
+        sparkles(e.x + Math.cos(k.a1) * (e.r + 10), e.y + Math.sin(k.a1) * (e.r + 10), 8);
+        tone(700, 1050, .1, .12);
+        return;
+      }
+      const ke = smooth(kk);
+      poseKid(k, k.a0 + (k.a1 - k.a0) * ke, e.r + 5.5 + Math.abs(Math.sin(kk * Math.PI * 4)) * 9);
+      tousABord = false;
+    });
+    if (tousABord) { // tout le monde à bord : la fusée frémit de joie, puis dézoom
+      rocketFx.classList.add('countdown');
+      setTimeout(() => rocketFx.classList.remove('countdown'), 550);
+      titreIntro.classList.add('hide'); // le titre s'efface avec le dézoom
+      whoosh(false);
+      intro.phase = 'dezoom'; intro.t = 0;
+    }
+
+  } else if (intro.phase === 'dezoom') {
+    intro.t += dt;
+    if (intro.t >= DUREE_DEZOOM) {
+      intro.phase = 'jeu';
+      titreIntro.style.display = 'none';
+      firstTapDone = true;   // l'accueil est joué maintenant, pas au premier tap de jeu
+      playVoice('accueil');  // "Touche une planète pour jouer !"
+    }
+  }
+
+  updateCamera();
+}
+
+function updateCamera() { // gros plan sur la Terre au départ, identité pendant le jeu
+  const e = bodies.terre;
+  let z, fx, fy;
+  if (intro.phase === 'attente' || intro.phase === 'embarquement') {
+    z = ZOOM_INTRO; fx = e.x; fy = e.y;                       // la caméra suit la Terre
+  } else if (intro.phase === 'dezoom') {
+    const k = smooth(Math.min(intro.t / DUREE_DEZOOM, 1));
+    z = ZOOM_INTRO + (1 - ZOOM_INTRO) * k;                    // 6.5 -> 1
+    fx = e.x + (900 - e.x) * k; fy = e.y + (625 - e.y) * k;   // recentrage progressif
+  } else {
+    z = 1; fx = 900; fy = 625;                                // identité : vue du jeu
+  }
+  gCamera.setAttribute('transform',
+    `translate(${(900 - z * fx).toFixed(2)},${(625 - z * fy).toFixed(2)}) scale(${z.toFixed(4)})`);
+}
+
+/* ------------------------------------------------------------------ */
+/* 9. PORTE PARENTALE : maintenir le cadenas 3 secondes                */
+/* ------------------------------------------------------------------ */
+(function parentGate() {
+  const lock = document.getElementById('lock');
+  const prog = document.getElementById('lockProg');
+  const CIRC = 175.9;
+  let holding = false, t0 = 0, raf = 0;
+
+  function tick() {
+    if (!holding) return;
+    const p = Math.min(1, (performance.now() - t0) / 3000);
+    prog.setAttribute('stroke-dashoffset', (CIRC * (1 - p)).toFixed(1));
+    if (p >= 1) {
+      holding = false;
+      prog.setAttribute('stroke-dashoffset', CIRC);
+      openParent();
+      return;
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  lock.addEventListener('pointerdown', e => {
+    e.stopPropagation(); e.preventDefault();
+    holding = true; t0 = performance.now(); tick();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+    lock.addEventListener(ev, () => {
+      holding = false; cancelAnimationFrame(raf);
+      prog.setAttribute('stroke-dashoffset', CIRC);
+    }));
+
+  // alternative pour les parents : 3 petits taps rapides suffisent aussi
+  let tapTimes = [];
+  lock.addEventListener('pointerup', () => {
+    if (performance.now() - t0 < 350) { // c'était un tap, pas un maintien
+      const now = performance.now();
+      tapTimes = tapTimes.filter(t => now - t < 1600);
+      tapTimes.push(now);
+      if (tapTimes.length >= 3) { tapTimes = []; openParent(); }
+    }
+  });
+
+  const panel = document.getElementById('parent');
+  const btnSound = document.getElementById('btnSound');
+  const btnFS = document.getElementById('btnFS');
+  const btnMusic = document.getElementById('btnMusic');
+  const musicVolInput = document.getElementById('musicVol');
+
+  function openParent() {
+    lock.classList.remove('decouvre'); // assez pulsé : les parents ont trouvé
+    panel.classList.remove('hidden');
+  }
+  document.getElementById('btnClose').addEventListener('click', () => panel.classList.add('hidden'));
+
+  btnSound.addEventListener('click', () => {
+    muted = !muted;
+    btnSound.textContent = muted ? '🔇 Son : coupé' : '🔊 Son : activé';
+    if (master) master.gain.value = muted ? 0 : 1;
+    if (muted) { try { speechSynthesis.cancel(); } catch (e) {} if (curAudio) curAudio.pause(); }
+  });
+
+  function refreshMusicUI() {
+    btnMusic.textContent = musicOn ? '🎵 Musique : activée' : '🎵 Musique : coupée';
+    musicVolInput.value = Math.round(musicVol * 100);
+  }
+  refreshMusicUI();
+  btnMusic.addEventListener('click', () => { musicOn = !musicOn; refreshMusicUI(); saveMusicPrefs(); });
+  musicVolInput.addEventListener('input', () => { musicVol = musicVolInput.value / 100; saveMusicPrefs(); });
+
+  btnFS.addEventListener('click', () => {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else {
+        const d = document.documentElement;
+        (d.requestFullscreen ? d.requestFullscreen() : d.webkitRequestFullscreen && d.webkitRequestFullscreen());
+      }
+    } catch (e) {}
+  });
+})();
+
+/* ------------------------------------------------------------------ */
+/* 10. BOUCLE PRINCIPALE                                               */
+/* ------------------------------------------------------------------ */
+function updateBodies(dt) {
+  SUN.x = CX; SUN.y = CY;
+  for (const b of PLANETS) {
+    b.a += b.w * dt;
+    b.x = CX + Math.cos(b.a) * b.rx;
+    b.y = CY + Math.sin(b.a) * b.ry;
+  }
+  const e = bodies.terre;
+  MOON.a += MOON.w * dt;
+  MOON.x = e.x + Math.cos(MOON.a) * MOON.orb;
+  MOON.y = e.y + Math.sin(MOON.a) * MOON.orb;
+
+  for (const b of order) {
+    b.g.setAttribute('transform', `translate(${b.x.toFixed(1)},${b.y.toFixed(1)})`);
+    b.hit.setAttribute('cx', b.x.toFixed(1));
+    b.hit.setAttribute('cy', b.y.toFixed(1));
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000) || .016;
+  last = now;
+  updateBodies(dt);
+  updateRocket(dt);
+  updateParticles(dt);
+  updateMusic();
+  updateShooting(dt);
+  updateShuttle(dt);
+  updateSatellite(dt);
+  updateOvni(dt);
+  updateIntro(dt); // caméra de démarrage (identité pendant le jeu)
+  requestAnimationFrame(frame);
+}
+updateBodies(0);      // place tout le monde avant le premier rendu
+updateRocket(.016);
+updateCamera();       // gros plan de démarrage posé dès la première image
+requestAnimationFrame(frame);
+
+/* exposition de débogage (inoffensive) */
+window.__dbg = {
+  rocket, bodies, onTap, music, vCache,
+  rituels: () => ({ firstTapDone, countdownDone }),
+  intro: () => intro.phase,
+  ambiance: () => ({
+    etoilesVisibles: shooting.items.length,
+    etoilesVues: shooting.seen,
+    navette: {
+      active: shuttle.active, fuite: shuttle.fleeing, fuites: shuttle.fuites,
+      x: Math.round(shuttle.x), y: Math.round(shuttle.y),
+      prochaineDans: Math.round(shuttle.next),
+    },
+    satellite: {
+      active: satellite.active,
+      x: Math.round(satellite.x), y: Math.round(satellite.y),
+      prochaineDans: Math.round(satellite.next), traversees: satellite.traversees,
+    },
+    ovni: {
+      active: ovni.active, fuite: ovni.fleeing, surprises: ovni.surprises,
+      x: Math.round(ovni.x), y: Math.round(ovni.y),
+      prochaineDans: Math.round(ovni.next),
+    },
+  }),
+};
+</script>
+</body>
+</html>

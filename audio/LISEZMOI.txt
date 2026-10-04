@@ -1,0 +1,50 @@
+AJOUTER VOTRE VOIX DANS LE JEU
+===============================
+
+Vos enregistrements sont détectés automatiquement dès qu'ils sont présents
+dans ce dossier (la voix de synthèse ne sert que de secours).
+
+Un fichier audio par astre, avec EXACTEMENT ce nom :
+
+  soleil.mp3    -> "Le Soleil ! Notre grande étoile ! Il nous donne chaud et la lumière !"
+  mercure.mp3   -> "Mercure ! Toute petite, toute grise, tout près du Soleil !"
+  venus.mp3     -> "Vénus ! La belle planète orange !"
+  terre.mp3     -> "La Terre ! C'est notre maison !"
+  lune.mp3      -> "La Lune ! Elle tourne autour de la Terre !"
+  mars.mp3      -> "Mars ! La planète rouge !"
+  jupiter.mp3   -> "Jupiter ! La plus grande de toutes les planètes !"
+  saturne.mp3   -> "Saturne ! Regarde ses beaux anneaux !"
+  uranus.mp3    -> "Uranus ! La grande planète bleue !"
+  neptune.mp3   -> "Neptune ! Tout au bout, où il fait très froid !"
+
+Deux fichiers d'ambiance sont également utilisés :
+
+  accueil.mp3   -> joué à la fin de l'écran de démarrage, quand le jeu se
+                   révèle ("Touche une planète pour jouer !")
+  compte.mp3    -> joué au tout premier décollage de la fusée
+                   ("Trois... deux... un... décollage !") ; la fusée
+                   attend la fin du compte avant de s'envoler.
+
+MUSIQUE D'AMBIANCE
+------------------
+Les morceaux présents dans ce dossier sont joués en boucle, enchaînés
+avec un fondu de 2 secondes. Fichiers actuellement utilisés :
+
+  soundtrack.wav   (la casse n'a pas d'importance : .wav ou .WAV)
+  space track.mp3
+
+Pour changer de musique : remplacez simplement ces fichiers en gardant
+le même nom (ou ajoutez-y les vôtres en demandant la modification de la
+liste dans index.html, section "musique d'ambiance").
+
+Volume et arrêt de la musique : cadenas (maintenir 3 s) -> Espace parents.
+Le réglage est mémorisé d'une session à l'autre.
+
+CONSEILS D'ENREGISTREMENT
+-------------------------
+- Format : MP3 de préférence (WAV, OGG et M4A fonctionnent aussi).
+- Voix chaleureuse, débit lent, phrases courtes (l'enfant répète après vous !).
+- Enregistrez dans une pièce calme, près du micro.
+- Sur Mac : appli "Mémo vocal" ; sur iPad/iPhone : "Dictaphone".
+- Renommez chaque enregistrement avec le nom exact ci-dessus
+  (attention : pas d'espace, tout en minuscules : "terre.mp3").
