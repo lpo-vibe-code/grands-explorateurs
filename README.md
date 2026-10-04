@@ -1,5 +1,11 @@
 # 🚀 Grands explorateurs — le système solaire à toucher
 
+## ▶️ [JOUER MAINTENANT — cliquer ici](https://lpo-vibe-code.github.io/grands-explorateurs/)
+
+*(Ce lien fonctionne sur iPad, iPhone, Mac — ajoute-le ensuite à l'écran d'accueil depuis Safari.)*
+
+---
+
 Application de découverte du système solaire pour les tout-petits (dès 3 ans).
 **Zéro texte à l'écran** : l'enfant explore en tapant sur les astres, tout passe
 par l'image, le son et l'animation.
