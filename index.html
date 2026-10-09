@@ -73,16 +73,17 @@
   }
   #titreIntro.hide { opacity:0; }
 
-  /* ---- indication "tape ici" ---- */
-  #hint {
-    position:absolute; left:50%; top:56%; width:120px; height:120px;
-    transform:translate(-50%,-50%); pointer-events:none;
-    transition:opacity .6s; z-index:6;
+  /* ---- indication "appuie ici" : main flottant sous la Terre (dans la scène,
+         la Lune peut passer devant elle) ---- */
+  #gHint { opacity:1; transition:opacity .6s; }
+  #gHint.hide { opacity:0; }
+  .hint-halo { animation:halo 2.8s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes halo { 0%,100% { opacity:.08; transform:scale(1); } 50% { opacity:.22; transform:scale(1.12); } }
+  .hand-float { animation:apesanteur 4.5s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes apesanteur { /* dérive lente haut/bas + léger balancement : zéro gravité */
+    0%,100% { transform:translateY(6px) rotate(-5deg); }
+    50%     { transform:translateY(-9px) rotate(5deg); }
   }
-  #hint.hide { opacity:0; }
-  .hint-bob { animation:bob 1.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
-  @keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-16px); } }
-  .hint-ring { animation:spin 6s linear infinite; transform-box:fill-box; transform-origin:center; }
 
   /* ---- cadenas parents : visible, pulsant au démarrage ---- */
   #lock {
@@ -189,6 +190,7 @@
   <g id="gCamera">
     <g id="gShooting"></g>
     <g id="gOrbits"></g>
+    <g id="gHint" pointer-events="none"></g>
     <g id="gShuttle" pointer-events="none"></g>
     <g id="gBodies"></g>
     <g id="gTrail" pointer-events="none"></g>
@@ -197,17 +199,6 @@
     <g id="gFx" pointer-events="none"></g>
   </g>
 </svg>
-
-<!-- indication "tape ici" (aucun texte) -->
-<div id="hint">
-  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-    <circle class="hint-ring" cx="60" cy="60" r="42" fill="none" stroke="#ffd23e" stroke-width="3" stroke-dasharray="10 12" opacity=".7"/>
-    <g class="hint-bob">
-      <circle cx="60" cy="52" r="13" fill="#ffffff" opacity=".95"/>
-      <rect x="52" y="60" width="16" height="34" rx="8" fill="#ffffff" opacity=".95"/>
-    </g>
-  </svg>
-</div>
 
 <!-- cadenas parents : maintenir 3 secondes, ou 3 petits taps -->
 <div id="lock" class="decouvre" title="Parents">
@@ -226,7 +217,7 @@
     <h2>Espace parents</h2>
     <button id="btnSound">🔊 Son : activé</button>
     <button id="btnMusic">🎵 Musique : activée</button>
-    <div class="volrow"><span>🎵 Volume</span><input type="range" id="musicVol" min="0" max="100" value="50" aria-label="Volume de la musique"></div>
+    <div class="volrow"><span>🎵 Volume</span><input type="range" id="musicVol" min="0" max="100" value="30" aria-label="Volume de la musique"></div>
     <button id="btnFS">⛶ Plein écran</button>
     <button id="btnClose">✅ Fermer</button>
     <p class="tip">Pour ajouter votre voix : déposez un fichier audio par astre dans le dossier <b>audio/</b>
@@ -308,6 +299,7 @@ addBody(SUN); PLANETS.forEach(addBody); addBody(MOON);
 
 /* Phrases de la voix off (utilisées par la synthèse vocale en secours) */
 const LINES = {
+  demarrage : "Appuie sur l'écran pour commencer !",
   accueil : "Touche une planète pour jouer !",
   compte  : "Troooois... deux... un... décollage !",
   soleil : "Le Soleil ! Notre grande étoile ! Il nous donne chaud et la lumière !",
@@ -526,16 +518,22 @@ el('circle', { cx:0, cy:1.5, r:3.4, fill:'#aee1ff', stroke:'#e7edf7', 'stroke-wi
 /* ------------------------------------------------------------------ */
 /* 5. AUDIO : voix (fichier perso sinon synthèse) + bruitages générés  */
 /* ------------------------------------------------------------------ */
-let actx = null, master = null, muted = false, unlocked = false;
-function audioUnlock() {
-  if (unlocked) return; unlocked = true;
-  try {
-    actx = new (window.AudioContext || window.webkitAudioContext)();
-    master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
-    actx.resume();
-  } catch (e) { /* audio indisponible : le jeu continue en silence */ }
-  if (!music.players.length) buildMusic();
-  startMusic();
+let actx = null, master = null, muted = false, unlocked = false, ttsPrime = false;
+function audioUnlock() { // appelé dans chaque geste utilisateur (sans frais si déjà débloqué)
+  if (!unlocked) {
+    unlocked = true;
+    try {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
+    } catch (e) { /* audio indisponible : le jeu continue en silence */ }
+    if (!music.players.length) buildMusic();
+  }
+  if (actx && actx.state !== 'running') actx.resume().catch(() => {}); // iOS suspend en arrière-plan / 'interrupted'
+  startMusic(); // sans effet si déjà parti ; retente si le navigateur avait refusé
+  if (!ttsPrime && 'speechSynthesis' in window) { // amorce le moteur vocal d'iOS (exige un geste)
+    ttsPrime = true;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  }
 }
 
 /* --- voix off : audio/xxx.mp3 si présent, sinon synthèse vocale --- */
@@ -615,7 +613,7 @@ const TRACK_SLOTS = [
   ['soundtrack.wav', 'soundtrack.WAV', 'soundtrack.m4a'],
   ['space track.mp3', 'space track.MP3'],
 ];
-let musicOn = true, musicVol = .5;
+let musicOn = true, musicVol = .3; // niveau par défaut : la musique reste sous les voix
 const music = { players: [], started: false, idx: 0, cur: null, next: null, fading: false, fadeStart: 0, fadeDur: 2000 };
 
 (function loadMusicPrefs() {
@@ -631,11 +629,25 @@ function saveMusicPrefs() {
   try { localStorage.setItem('prefs-musique', JSON.stringify({ on: musicOn, vol: musicVol })); } catch (e) {}
 }
 function effMusicVol() { return (muted || !musicOn) ? 0 : musicVol; }
+function applyVol(p, v) { // iPad/iPhone : p.volume est en lecture seule -> on passe par le GainNode
+  p.__vol = v;
+  if (p.__gain) p.__gain.gain.value = v;
+  else { try { p.volume = v; } catch (e) {} }
+}
 
 function buildMusic() {
   TRACK_SLOTS.forEach(candidates => {
     const a = new Audio();
     a.preload = 'auto'; a.volume = 0;
+    if (actx) { // son routé via Web Audio : seul un GainNode règle le volume sur iPad/iPhone
+      try {
+        const src = actx.createMediaElementSource(a);
+        const g = actx.createGain(); g.gain.value = 0;
+        src.connect(g); g.connect(master);
+        a.__gain = g;
+        a.volume = 1; // signal plein régime dans le graphe : le GainNode règle tout (iOS ignore p.volume)
+      } catch (e) { /* routage refusé : on gardera le volume de l'élément */ }
+    }
     let ci = 0;
     a.addEventListener('error', () => { // ce nom n'existe pas -> variante suivante
       ci++;
@@ -654,8 +666,8 @@ function startMusic() {
   if (!first) return; // aucun morceau disponible : jeu sans musique
   music.started = true;
   music.cur = first;
-  first.volume = effMusicVol();
-  first.play().catch(() => { music.started = false; }); // réessai au prochain tap
+  applyVol(first, effMusicVol());
+  first.play().catch(() => { music.started = false; }); // réessai au prochain geste
 }
 function switchTrack(quick) {
   const usable = music.players.filter(p => !p.dataset.broken);
@@ -668,7 +680,7 @@ function switchTrack(quick) {
     b.play().catch(() => {});
     return;
   }
-  b.volume = 0;
+  applyVol(b, 0);
   b.play().catch(() => {});
   music.next = b; music.fading = true;
   music.fadeStart = performance.now();
@@ -679,8 +691,8 @@ function updateMusic() { // appelé à chaque image par la boucle principale
   if (music.fading && music.next) {
     const k = Math.min(1, (performance.now() - music.fadeStart) / music.fadeDur);
     const e = k * k * (3 - 2 * k); // fondu bien fluide aux deux extrémités
-    music.cur.volume  = effMusicVol() * (1 - e);
-    music.next.volume = effMusicVol() * e;
+    applyVol(music.cur,  effMusicVol() * (1 - e));
+    applyVol(music.next, effMusicVol() * e);
     if (k >= 1) {
       try { music.cur.pause(); music.cur.currentTime = 0; } catch (e2) {}
       music.cur = music.next; music.next = null; music.fading = false;
@@ -688,7 +700,7 @@ function updateMusic() { // appelé à chaque image par la boucle principale
     return;
   }
   const v = effMusicVol();
-  if (Math.abs(music.cur.volume - v) > .001) music.cur.volume = v; // n'écrit que si changé
+  if (Math.abs((music.cur.__vol || 0) - v) > .001) applyVol(music.cur, v); // n'écrit que si changé
   const c = music.cur;
   if (c.duration && isFinite(c.duration) && !c.paused && c.duration - c.currentTime <= 2) switchTrack(false);
 }
@@ -1211,9 +1223,26 @@ function touchdown() { thump(); dust(rocket.x, rocket.y + 10); sparkles(rocket.x
 let hintDone = false;
 function hideHint() {
   if (hintDone) return; hintDone = true;
-  const h = document.getElementById('hint');
-  h.classList.add('hide'); setTimeout(() => h.remove(), 700);
+  stopRappelDemarrage();
+  if (gHint.isConnected) {
+    gHint.classList.add('hide');
+    setTimeout(() => gHint.remove(), 700);
+  }
 }
+
+/* rappel vocal de l'écran de démarrage : audio/demarrage.mp3 si présent,
+   sinon voix de synthèse ("Appuie sur l'écran pour commencer !").
+   Joué 15 s après l'ouverture, puis rappelé chaque minute tant que
+   l'enfant n'a pas touché l'écran. */
+let rappelTimer = 0, rappelInterval = 0;
+function stopRappelDemarrage() {
+  clearTimeout(rappelTimer); clearInterval(rappelInterval);
+  rappelTimer = rappelInterval = 0;
+}
+rappelTimer = setTimeout(() => {
+  playVoice('demarrage');
+  rappelInterval = setInterval(() => playVoice('demarrage'), 60000);
+}, 15000);
 
 function selectGlow(id) {
   for (const b of order) b.glowEl.classList.toggle('on', b.id === id);
@@ -1294,7 +1323,15 @@ SVG.addEventListener('pointerdown', ev => {
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick',   e => e.preventDefault());
-document.addEventListener('pointerdown', () => startMusic()); // réessai si l'autoplay a été refusé
+// tout geste débloque le son (audioUnlock refait une tentative tant que la lecture
+// n'a pas démarré). pointerdown suffit sur ordinateur, mais iOS/iPadOS ne lancent
+// la lecture d'un média que lorsque le doigt se lève : écouter aussi pointerup,
+// touchend et click. capture:true pour passer avant les stopPropagation des zones.
+['pointerdown', 'pointerup', 'touchend', 'click'].forEach(ev =>
+  document.addEventListener(ev, () => audioUnlock(), { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { // retour d'arrière-plan : relancer le contexte
+  if (!document.hidden && unlocked) audioUnlock();
+});
 
 /* ------------------------------------------------------------------ */
 /* 8bis. ÉCRAN DE DÉMARRAGE : gros plan sur la Terre et la fusée,      */
@@ -1343,6 +1380,22 @@ introTap.addEventListener('pointerdown', ev => {
   intro.phase = 'embarquement'; intro.t = 0;
 });
 
+/* main "appuie ici" : dessinée dans la scène, juste sous la Terre —
+   la Lune (devant) peut la cacher en passant. Elle suit la Terre à chaque image. */
+const gHint = document.getElementById('gHint');
+(function buildMainHint() {
+  const g = el('g', { transform: 'scale(.42)', opacity: .95 }, gHint); // dessin 120×120 -> ~50 unités
+  el('circle', { cx:60, cy:60, r:50, fill:'#ffd23e', class:'hint-halo' }, g);
+  const main = el('g', { class:'hand-float' }, g);
+  el('rect', { x:47, y:10, width:16, height:60,   rx:8,   fill:'#ffffff' }, main); // index levé
+  el('rect', { x:62, y:38, width:16, height:26,   rx:7.5, fill:'#ffffff' }, main); // majeur replié
+  el('rect', { x:77, y:44, width:15, height:22,   rx:7,   fill:'#ffffff' }, main); // annulaire replié
+  el('rect', { x:91, y:49, width:14, height:18,   rx:6,   fill:'#ffffff' }, main); // auriculaire replié
+  el('rect', { x:26, y:56, width:24, height:13,   rx:6.5, fill:'#ffffff', transform:'rotate(-32 38 62)' }, main); // pouce
+  el('rect', { x:40, y:54, width:64, height:36,   rx:16,  fill:'#ffffff' }, main); // paume
+  el('rect', { x:52, y:86, width:30, height:16,   rx:6,   fill:'#ffd23e' }, main); // manchette
+})();
+
 function poseKid(k, a, d) { // place un enfant sur la surface de la Terre
   const e = bodies.terre;
   k.g.setAttribute('transform', `translate(${(e.x + Math.cos(a) * d).toFixed(1)},${(e.y + Math.sin(a) * d).toFixed(1)})`);
@@ -1350,6 +1403,9 @@ function poseKid(k, a, d) { // place un enfant sur la surface de la Terre
 
 function updateIntro(dt) {
   const e = bodies.terre;
+  if (gHint.isConnected) // la main flotte un peu plus bas que la Terre, et la suit
+    gHint.setAttribute('transform',
+      `translate(${(e.x - 25.2).toFixed(1)},${(e.y + e.r + 8).toFixed(1)}) scale(.42)`);
 
   if (intro.phase === 'attente') { // les enfants sautillent doucement en attendant
     intro.t += dt;
@@ -1438,6 +1494,7 @@ function updateCamera() { // gros plan sur la Terre au départ, identité pendan
   }
   lock.addEventListener('pointerdown', e => {
     e.stopPropagation(); e.preventDefault();
+    audioUnlock(); // le cadenas débloque aussi le son (il avale le tap)
     holding = true; t0 = performance.now(); tick();
   });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>

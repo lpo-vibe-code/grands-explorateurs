@@ -17,8 +17,11 @@ Un fichier audio par astre, avec EXACTEMENT ce nom :
   uranus.mp3    -> "Uranus ! La grande planète bleue !"
   neptune.mp3   -> "Neptune ! Tout au bout, où il fait très froid !"
 
-Deux fichiers d'ambiance sont également utilisés :
+Trois fichiers d'ambiance sont également utilisés :
 
+  demarrage.mp3 -> joué 15 secondes après l'ouverture, puis rappelé
+                   chaque minute tant que l'enfant n'a pas touché
+                   l'écran ("Appuie sur l'écran pour commencer !")
   accueil.mp3   -> joué à la fin de l'écran de démarrage, quand le jeu se
                    révèle ("Touche une planète pour jouer !")
   compte.mp3    -> joué au tout premier décollage de la fusée
